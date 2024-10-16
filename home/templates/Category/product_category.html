@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>{{ self.cate_title }}</h1>
+    <h1>Product</h1>
+    <ul>
+        {% for product in products %}
+            <li>
+                {% for block in product.content %}
+                    <h2>{{ block.value.main_title }}</h2>
+                    <div>{{ block.value.description|safe }}</div>
+                    <p>Available Sizes: {{ block.value.available_size|join:", " }}</p>
+                    <div>
+                        {% for img in block.value.images %}
+                            <img src="{{ img.url }}" alt="{{ block.value.main_title }}">
+                        {% endfor %}
+                    </div>
+                    <p>Tags: {{ block.value.tags|join:", " }}</p>
+                {% endfor %}
+            </li>
+    
+        {% endfor %}
+    </ul>
+
+----------------------------------------------------------
+    <div id="category-list"></div>
+    
+    {% comment %} <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const apiUrl = 'http://127.0.0.1:8000/api/v2/product/products/';
+            console.log('API:', apiUrl);
+        
+            fetch(apiUrl)
+                .then(response => {
+                    console.log("Response status:", response.status);
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
+                    return response.json(); 
+                })
+                .then(data => {
+                    console.log("Full API response:", data);
+        
+                    if (data.result === 'success' && Array.isArray(data.records)) {
+                        const categoryList = document.getElementById('category-list');
+                        categoryList.innerHTML = ''; 
+        
+                        data.records.forEach(product => {
+                            console.log("Product details:", product); 
+        
+                            const content = product.content[0]?.fields; 
+                            if (!content) {
+                                console.error('No content product:', product);
+                                return; 
+                            }
+        
+                            const mainTitle = content?.main_title?.text || 'No Main Title';
+                            const description = content?.description?.value || 'No Description Available';
+                            const category = content?.category?.value || 'No Category Available';
+        
+                        
+                            const availableSizeList = content?.available_size?.value
+                            ? content.available_size.value
+                                .replace(/<ListValue:\s*\[|\]|\s*|\<\w+\:|\>/g, '') 
+                                .split(',') 
+                                .map(size => size.trim().replace(/['>]/g, '')) 
+                            : [];
+        
+                            const availableSize = Array.isArray(availableSizeList) && availableSizeList.length > 0 
+                                ? availableSizeList.join(', ') 
+                                : 'No Size Available';
+                           
+                            const div = document.createElement('div');
+                            div.classList.add('product-item');
+                            div.innerHTML = `
+                                <h3>${mainTitle}</h3>
+                                <p>Description: ${description}</p>
+                                <p>Category: ${category}</p>
+                                <p>Available Size: ${availableSize}</p>
+                                <img src="${imageUrl}" alt="${mainTitle}" style="max-width: 200px; height: auto;" />
+                                
+                            `;
+        
+                            categoryList.appendChild(div);
+                        });
+                    } else {
+                        console.error('Failed to fetch categories or no records available:', data.message);
+                        displayErrorMessage('No products found or an error occurred while fetching data.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching products:', error);
+                    displayErrorMessage('An error occurred while fetching the data. Please try again later.');
+                });
+            
+            function displayErrorMessage(message) {
+                const categoryList = document.getElementById('category-list');
+                categoryList.innerHTML = `<p class="error-message">${message}</p>`;
+            }
+        });
+        
+    </script> {% endcomment %}
+     {% comment %} <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const apiUrl = 'http://127.0.0.1:8000/api/v2/product/products/?category=Condiments';
+            console.log('API:', apiUrl);
+        
+            fetch(apiUrl)
+                .then(response => {
+                    console.log("Response status:", response.status);
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Full API response:", data);
+        
+                    if (data.result === 'success' && Array.isArray(data.records)) {
+                        const categoryList = document.getElementById('category-list');
+                        categoryList.innerHTML = '';
+        
+                        data.records.forEach(product => {
+                            console.log("Product details:", product);
+        
+                            const content = product.content[0]?.fields;
+                            if (!content) {
+                                console.error('No content product:', product);
+                                return;
+                            }
+        
+                            const mainTitle = content?.main_title?.text || 'No Main Title';
+                            const description = content?.description?.value || 'No Description Available';
+                            const category = content?.category?.value || 'No Category Available';
+        
+                            // 
+                            const availableSizeList = content?.available_size?.value
+                                ? content.available_size.value
+                                    .replace(/<ListValue:\s*\[|\]|\s*|\<\w+\:|\>/g, '')
+                                    .split(',')
+                                    .map(size => size.trim().replace(/['>]/g, ''))
+                                : [];
+        
+                            const availableSize = Array.isArray(availableSizeList) && availableSizeList.length > 0
+                                ? availableSizeList.join(', ')
+                                : 'No Size Available';
+                            const images = content?.images?.value || '';
+                            const imageUrls = parseImageList(images);
+        
+                            const imageHtml = imageUrls.map(url => `
+                                <img src="${url}" alt="${mainTitle}" style="max-width: 200px; height: auto;" />
+                            `).join('');
+        
+                            const div = document.createElement('div');
+                            div.classList.add('product-item');
+                            div.innerHTML = `
+                                <h3>${mainTitle}</h3>
+                                <p>Description: ${description}</p>
+                                <p>Category: ${category}</p>
+                                <p>Available Size: ${availableSize}</p>
+                                ${imageHtml}
+                            `;
+        
+                            categoryList.appendChild(div);
+                        });
+                    } else {
+                        console.error('Failed to fetch categories or no records available:', data.message);
+                        displayErrorMessage('No products found or an error occurred while fetching data.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching products:', error);
+                    displayErrorMessage('An error occurred while fetching the data. Please try again later.');
+                });
+        
+            function parseImageList(imagesStr) {
+                const regex = /<Image:\s*(\w+)>/g;
+                const imageUrls = [];
+                let match;
+        
+                while ((match = regex.exec(imagesStr)) !== null) {
+                    const imageName = match[1];
+                    const imageUrl = `http://127.0.0.1:8000/media/images/${imageName}.jpg`; 
+                    imageUrls.push(imageUrl);
+                }
+        
+                return imageUrls;
+            }
+        
+            function displayErrorMessage(message) {
+                const categoryList = document.getElementById('category-list');
+                categoryList.innerHTML = `<p class="error-message">${message}</p>`;
+            }
+        });
+        
+    </script>  {% endcomment %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const apiUrl = 'http://127.0.0.1:8000/api/v2/product/products/';
+            const categorySelect = document.getElementById('category-select');
+            const categoryList = document.getElementById('category-list');
+        
+            categorySelect.addEventListener('change', function() {
+                const selectedCategory = this.value;
+                const urlWithCategory = selectedCategory ? `${apiUrl}?category=${encodeURIComponent(selectedCategory)}` : apiUrl;
+        
+                showLoadingIndicator(); 
+        
+                fetch(urlWithCategory)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok: ' + response.statusText);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        categoryList.innerHTML = ''; 
+        
+                        if (data.result === 'success' && Array.isArray(data.records)) {
+                            data.records.forEach(product => {
+                                const content = product.content[0]?.fields;
+                                if (!content) {
+                                    return;
+                                }
+        
+                                const mainTitle = content?.main_title?.text || 'No Main Title';
+                                const description = content?.description?.value || 'No Description Available';
+                                const category = content?.category?.value || 'No Category Available';
+                                const availableSizeList = content?.available_size?.value
+                                    ? content.available_size.value
+                                        .replace(/<ListValue:\s*\[|\]|\s*|\<\w+\:|\>/g, '')
+                                        .split(',')
+                                        .map(size => size.trim().replace(/['>]/g, ''))
+                                    : [];
+                                
+                                const availableSize = Array.isArray(availableSizeList) && availableSizeList.length > 0
+                                    ? availableSizeList.join(', ')
+                                    : 'No Size Available';
+                                const images = content?.images?.value || '';
+                                const imageUrls = parseImageList(images);
+        
+                                const imageHtml = imageUrls.map(url => `
+                                    <img src="${url}" alt="${mainTitle}" style="max-width: 200px; height: auto;" />
+                                `).join('');
+        
+                                const div = document.createElement('div');
+                                div.classList.add('product-item');
+                                div.innerHTML = `
+                                    <h3>${mainTitle}</h3>
+                                    <p>Description: ${description}</p>
+                                    <p>Category: ${category}</p>
+                                    <p>Available Size: ${availableSize}</p>
+                                    ${imageHtml}
+                                `;
+        
+                                categoryList.appendChild(div);
+                            });
+                        } else {
+                            displayErrorMessage('No products found for the selected category.');
+                        }
+                    })
+                    .catch(error => {
+                        displayErrorMessage('An error occurred while fetching the data. Please try again later.');
+                    });
+            });
+        
+            function parseImageList(imagesStr) {
+                const regex = /<Image:\s*(\w+)>/g;
+                const imageUrls = [];
+                let match;
+        
+                while ((match = regex.exec(imagesStr)) !== null) {
+                    const imageName = match[1];
+                    const imageUrl = `http://127.0.0.1:8000/media/images/${imageName}.jpg`; 
+                    imageUrls.push(imageUrl);
+                }
+        
+                return imageUrls;
+            }
+        
+            function showLoadingIndicator() {
+                categoryList.innerHTML = '<p>Loading products...</p>';
+            }
+        
+            function displayErrorMessage(message) {
+                categoryList.innerHTML = `<p class="error-message">${message}</p>`;
+            }
+        });
+        
+    </script> 
+    
+    
+    
+    
+    
+    
+    
+    
+    
+{% endblock %}

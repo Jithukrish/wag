@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>{{ page.cate_title }}</h1>
+
+    {% if products %}
+        <ul>
+            {% for product in products %}
+                <li>
+                    <a href="{% pageurl product %}">{{ product.content.product_details.title }}</a>
+                    <p>{{ product.content.product_details.description }}</p>
+                    <p>Price: ${{ product.content.product_details.price }}</p>
+                    {% if product.content.product_details.image %}
+                        <img src="{{ product.content.product_details.image.url }}" alt="{{ product.content.product_details.title }}" style="max-width: 200px;">
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No products available in this category.</p>
+    {% endif %}
+{% endblock %}

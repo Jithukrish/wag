@@ -1,0 +1,35 @@
+ {% extends "base.html" %}
+ {% load wagtailimages_tags %}
+{% load wagtailcore_tags %}
+{% block content %}
+
+    {% for block in page.content %}
+        {% if block.block_type == "product_details" %}
+            {% with product_details=block.value %}
+                <h1>Main title: {{ product_details.main_title }}</h1>
+
+                {% for im in product_details.images %}
+                {% comment %} {% if product_details.image %} {% endcomment %}
+                    {% image im fill-300x300 as img %}
+                        <img src="{{ img.url }}" alt="{{ product_details.main_title }}" style="max-width: 400px;">
+                {% comment %} {% endif %} {% endcomment %}
+                {% endfor %}
+         
+
+
+                <p>Description: {{ product_details.description|safe }}</p>
+                {% if product_details.available_size %}
+                     <p><strong>Available Sizes:</strong> ${{ product_details.available_size|join:", $" }}g</p>
+                {% endif %}
+            
+                {% if product_details.tags %}
+                    <p><strong>Tags:</strong> {{ product_details.tags|join:", " }}</p>
+                {% endif %}
+            {% endwith %}
+        {% endif %}
+    {% endfor %}
+
+{% endblock %} 
+
+
+

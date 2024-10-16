@@ -1,0 +1,408 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div id="product-list"></div>
+<div id="product-detail"></div>
+------------------------------------
+    <div class="hero">
+        {% if page.hero_image %}
+            <img src="{{ page.hero_image.url }}" alt="Hero Image" style="width: 100%; height: auto;">
+        {% endif %}
+        <div class="welcome-message">
+            <h1>Select Products</h1>
+            
+        <select id="category-select">
+            <option value="">Select a category</option>
+            <option value="Condiments">Condiments</option>
+            <option value="Spreads">Spreads</option>
+            <option value="Dairy">Dairy</option>
+            <option value="Beverages">Beverages</option>
+            <!-- Add more categories as needed -->
+        </select>
+        <div id="category-list"></div>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const apiUrl = 'http://127.0.0.1:8000/api/v2/product/products/';
+                const categorySelect = document.getElementById('category-select');
+                const categoryList = document.getElementById('category-list');
+            
+                categorySelect.addEventListener('change', function() {
+                    const selectedCategory = this.value;
+                    const urlWithCategory = selectedCategory ? `${apiUrl}?category=${encodeURIComponent(selectedCategory)}` : apiUrl;
+            
+                    showLoadingIndicator(); 
+            
+                    fetch(urlWithCategory)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Network response was not ok: ' + response.statusText);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            categoryList.innerHTML = ''; 
+            
+                            if (data.result === 'success' && Array.isArray(data.records)) {
+                                data.records.forEach(product => {
+                                    const content = product.content[0]?.fields;
+                                    if (!content) {
+                                        return;
+                                    }
+            
+                                    const mainTitle = content?.main_title?.text || 'No Main Title';
+                                    const description = content?.description?.value || 'No Description Available';
+                                    const category = content?.category?.value || 'No Category Available';
+                                    const availableSizeList = content?.available_size?.value
+                                        ? content.available_size.value
+                                            .replace(/<ListValue:\s*\[|\]|\s*|\<\w+\:|\>/g, '')
+                                            .split(',')
+                                            .map(size => size.trim().replace(/['>]/g, ''))
+                                        : [];
+                                    
+                                    const availableSize = Array.isArray(availableSizeList) && availableSizeList.length > 0
+                                        ? availableSizeList.join(', ')
+                                        : 'No Size Available';
+                                    const images = content?.images?.value || '';
+                                    const imageUrls = parseImageList(images);
+            
+                                    const imageHtml = imageUrls.map(url => `
+                                        <img src="${url}" alt="${mainTitle}" style="max-width: 200px; height: auto;" />
+                                    `).join('');
+                                    const tagsList = content?.tags?.value
+                                    ? content.tags.value
+                                        .replace(/<ListValue:\s*\[|\]|\s*|\<\w+\:|\>/g, '')
+                                        .split(',')
+                                        .map(tag => tag.trim().replace(/['>]/g, ''))
+                                    : [];
+        
+                                    const tags = Array.isArray(tagsList) && tagsList.length > 0
+                                        ? tagsList.join(', ')
+                                        : 'No Tags Available';
+            
+                                    const div = document.createElement('div');
+                                    div.classList.add('product-item');
+                                    div.innerHTML = `
+                                        <h3>${mainTitle}</h3>
+                                        <p>Description: ${description}</p>
+                                        <p>Category: ${category}</p>
+                                        <p>Available Size: ${availableSize}</p>
+                                        <p>Tags: ${tags}</p>
+                                        ${imageHtml}
+                                    `;
+            
+                                    categoryList.appendChild(div);
+                                });
+                            } else {
+                                displayErrorMessage('No products found for the selected category.');
+                            }
+                        })
+                        .catch(error => {
+                            displayErrorMessage('An error occurred while fetching the data. Please try again later.');
+                        });
+                });
+            
+                function parseImageList(imagesStr) {
+                    const regex = /<Image:\s*(\w+)>/g;
+                    const imageUrls = [];
+                    let match;
+            
+                    while ((match = regex.exec(imagesStr)) !== null) {
+                        const imageName = match[1];
+                        const imageUrl = `http://127.0.0.1:8000/media/images/${imageName}.jpg`; 
+                        imageUrls.push(imageUrl);
+                    }
+            
+                    return imageUrls;
+                }
+            
+                function showLoadingIndicator() {
+                    categoryList.innerHTML = '<p>Loading products...</p>';
+                }
+            
+                function displayErrorMessage(message) {
+                    categoryList.innerHTML = `<p class="error-message">${message}</p>`;
+                }
+            });
+            
+        </script>
+     
+           
+        </div>
+    </div>
+ 
+    <script>
+        async function fetchProductList() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/v2/product/products/');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const data = await response.json(); 
+                const products = data.records; 
+                console.log('Products are:', products); 
+                displayProductList(products);
+            } catch (error) {
+                console.error('Error fetching product list:', error);
+                document.getElementById('product-list').textContent = 'Failed to load products.';
+            }
+        }
+    
+        async function fetchProductDetails(id) { 
+            const productDetailElement = document.getElementById('product-detail');
+            productDetailElement.textContent = 'Loading...';  
+    
+            try {
+                console.log(`Fetching details for product id: ${id}`);  
+                
+                const response = await fetch(`http://127.0.0.1:8000/api/v2/product/products/${id}/`);  
+                
+                if (!response.ok) {
+                    throw new Error(`Template view error: ${response.status}`);  
+                }
+    
+                const product = await response.json();
+                
+                console.log('Product Details:', product);
+                displayProductDetails(product);
+            } catch (error) {
+                console.error('Error fetching product details:', error);
+                productDetailElement.textContent = error.message || 'Failed to load product details.';
+            }
+        }
+    
+        function displayProductList(products) {
+            const productList = document.getElementById('product-list');
+            productList.innerHTML = '<h2>Product List</h2>';
+            
+            if (!Array.isArray(products) || products.length === 0) {
+                productList.innerHTML += '<p>No products available.</p>';
+                return;
+            }
+            
+            products.forEach(product => {
+                console.log('Product Object:', product); 
+                const productItem = document.createElement('div');
+                productItem.textContent = product.title; 
+                productItem.className = 'product-item';
+    
+                const id = product.id; 
+                console.log(`Product id for ${product.title}: ${id}`); 
+    
+                
+                productItem.onclick = () => {
+                    if (id) { 
+                        console.log(`Product item clicked: ${id}`);
+                        fetchProductDetails(id);
+                    } else {
+                        console.error('Product id is undefined for:', product); 
+                    }
+                };
+                productList.appendChild(productItem);
+            });
+        }
+        
+        /*
+        function parseListValue(listValueString) {
+            if (listValueString.startsWith("<ListValue:") && listValueString.endsWith(">")) {
+                const content = listValueString.substring(listValueString.indexOf("[") + 1, listValueString.indexOf("]"));
+                return content.split(",").map(item => item.trim()).filter(Boolean);
+            }
+            return [];
+        }
+        function displayProductDetails(product) {
+            const productDetailElement = document.getElementById('product-detail');
+            productDetailElement.innerHTML = ''; 
+            productDetailElement.style.display = 'block'; 
+        
+            console.log('Fetched Product:', product); 
+        
+            if (product.result === 'success' && product.records) {
+                const { title, content, images } = product.records; 
+        
+                
+                const mainTitle = title || 'No Title Found';
+                productDetailElement.innerHTML += `<h3>${mainTitle}</h3>`;
+        
+                console.log('Content:', content); 
+        
+                if (Array.isArray(content) && content.length > 0) {
+                    content.forEach(block => {
+                        if (block.type === 'struct' && block.fields) {
+                            const { main_title, description, available_size, tags } = block.fields;
+        
+                            
+                            const extractedMainTitle = main_title?.text || 'No Title Found';
+                            productDetailElement.innerHTML += `<h4>${extractedMainTitle}</h4>`;
+        
+                            
+                            const extractedDescription = description?.value || 'No description available.';
+                            productDetailElement.innerHTML += `<p>${extractedDescription}</p>`;
+
+                            console.log('Available 8888888888888:', available_size);
+                            const availableSizesArray = parseListValue(available_size.value);
+                            handleListValues(available_size, 'Available Sizes', productDetailElement);
+        
+                            console.log('tags--------------:', tags);
+                            const tagsArray = parseListValue(tags.value);
+                            handleListValues(tags, 'Tags', productDetailElement);
+                        } else {
+                            console.warn('Block type or fields not found:', block);
+                        }
+                    });
+                } else {
+                    productDetailElement.innerHTML += 'No product details found.';
+                }
+        
+                
+                if (images && Array.isArray(images) && images.length > 0) {
+                    productDetailElement.innerHTML += '<h4>Images:</h4>';
+                    images.forEach(image => {
+                        productDetailElement.innerHTML += `<img src="${image.url}" alt="${image.title || 'Product Image'}" style="max-width: 100%; height: auto;" />`;
+                    });
+                } else {
+                    productDetailElement.innerHTML += '<p>No images available.</p>';
+                }
+            } else {
+                productDetailElement.innerHTML = 'Product details not found.';
+            }
+        }
+        function handleListValues(listValue, title, parentElement) {
+            if (listValue && listValue.value) {
+                const valuesArray = Array.isArray(listValue.value) ? listValue.value : (listValue.value.value || []);
+                console.log(`${title}:`, valuesArray); 
+        
+                if (valuesArray.length > 0) {
+                    parentElement.innerHTML += `<h4>${title}:</h4><ul>`;
+                    valuesArray.forEach(item => {
+                        parentElement.innerHTML += `<li>${item}</li>`;
+                    });
+                    parentElement.innerHTML += `</ul>`;
+                } else {
+                    parentElement.innerHTML += `<p>${title} are not available.</p>`;
+                }
+            } else {
+                parentElement.innerHTML += `<p>No ${title.toLowerCase()} found.</p>`;
+            }
+        }
+        */
+        
+        
+        
+    /**/
+        function parseListValue(listValueString) {
+            if (listValueString.startsWith("<ListValue:") && listValueString.endsWith(">")) {
+                const content = listValueString.substring(listValueString.indexOf("[") + 1, listValueString.indexOf("]"));
+                return content.split(",").map(item => item.trim()).filter(Boolean).map(item => item.replace(/<Image:\s*|\s*>/g, ''));
+            }
+            return [];
+        }
+        function displayProductDetails(product) {
+            const productDetailElement = document.getElementById('product-detail');
+            productDetailElement.innerHTML = ''; 
+            productDetailElement.style.display = 'block'; 
+        
+            console.log('Fetched Product:', product); 
+        
+            if (product.result === 'success' && product.records) {
+                const { title, content } = product.records; 
+        
+                const mainTitle = title || 'No Title Found';
+                productDetailElement.innerHTML += `<h3>${mainTitle}</h3>`;
+        
+                console.log('Content:', content); 
+        
+                if (Array.isArray(content) && content.length > 0) {
+                    content.forEach(block => {
+                        if (block.type === 'struct' && block.fields) {
+                            const { main_title,category, description, available_size, tags, images } = block.fields; // Ensure images is included
+        
+                            const extractedMainTitle = main_title?.text || 'No Title Found';
+                            productDetailElement.innerHTML += `<h4>${extractedMainTitle}</h4>`;
+
+                            
+        
+                            const extractedDescription = description?.value || 'No description available.';
+                            productDetailElement.innerHTML += `<p>${extractedDescription}</p>`;
+                            
+                            console.log("categoyr",category)
+                            const extractedCategory = category?.value || 'No category available'; 
+                            productDetailElement.innerHTML += `<p>Category: ${extractedCategory}</p>`;
+        
+                            console.log('Available Sizes:', available_size);
+                            const availableSizesArray = available_size?.value ? parseListValue(available_size.value) : [];
+                            handleListValues(availableSizesArray, 'Available Sizes', productDetailElement);
+        
+                            console.log('Tags:', tags);
+                            const tagsArray = tags?.value ? parseListValue(tags.value) : [];
+                            handleListValues(tagsArray, 'Tags', productDetailElement);
+        
+                            console.log("images : ",images)
+                            if (images && Array.isArray(images) && images.length > 0) {
+                                productDetailElement.innerHTML += '<h4>Images:</h4>';
+                                images.forEach(image => {
+                                    if (image.url) {
+                                        productDetailElement.innerHTML += `
+                                            <div>
+                                                <img src="${image.url}" alt="${image.title || 'Product Image'}" style="max-width: 100%; height: auto;" />
+                                                <p>${image.title || 'No title provided'}</p>
+                                            </div>`;
+                                    } else {
+                                        console.error('Image URL is missing for:', image);
+                                    }
+                                });
+                            } else {
+                                productDetailElement.innerHTML += '<p>No images available.</p>'; 
+                            }
+                        } else {
+                            console.warn('Block type or fields not found:', block);
+                        }
+                    });
+                } else {
+                    productDetailElement.innerHTML += 'No product details found.';
+                }
+            } else {
+                productDetailElement.innerHTML = 'Product details not found.';
+            }
+        }
+        
+        function handleListValues(valuesArray, title, parentElement) {
+            console.log(`${title}:`, valuesArray);
+            if (Array.isArray(valuesArray) && valuesArray.length > 0) {
+                parentElement.innerHTML += `<h4>${title}:</h4><ul>`;
+                valuesArray.forEach(item => {
+                    const cleanedItem = item.replace(/['"]/g, ''); 
+                    parentElement.innerHTML += `<li>${cleanedItem}</li>`;
+                });
+                parentElement.innerHTML += `</ul>`;
+            } else {
+                parentElement.innerHTML += `<p>No ${title.toLowerCase()} found.</p>`;
+            }
+        
+        }
+ 
+    
+           
+    
+       
+        
+        
+        window.onload = fetchProductList;
+    </script>
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+        
+    
+    
+    
+    
+
+{% endblock %}

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/welcome_page.css' %}">
+{% endblock extra_css %}
+
+{% block content %}
+{% comment %} {% include 'home/welcome_page.html' %} {% endcomment %}
+<h1>Product List</h1>
+
+{% endblock content %}
